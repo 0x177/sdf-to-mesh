@@ -1,1 +1,1 @@
-live preview: https://www.shadertoy.com/view/lf33Wl
+preview: https://www.shadertoy.com/view/lf33Wl
