@@ -78,17 +78,20 @@ async fn main() {
 
     println!("{} {}", vertices.len(),indices.len());
     
-     use std::io::Write;
-     let mut file = std::fs::File::create("foo.obj").unwrap();
+    use std::io::Write;
+    let mut file = std::fs::File::create("foo.obj").unwrap();
+
+
+    // maybe it is possible to combine these two loops
     for vertex in &vertices {
-     	let st = format!("vec3({},{},{}), \n",vertex.position.x,vertex.position.y,vertex.position.z);
+     	let st = format!("v {} {} {} \n",vertex.position.x,vertex.position.y,vertex.position.z);
 	file.write_all(&st.into_bytes()).unwrap();	
     }
-
-//    for index in indices.chunks(3) {
-//	let st = format!("f {} {} {} \n",index[0],index[1],index[2]);
-//	file.write_all(&st.into_bytes()).unwrap();	
-    //}
+    
+    for index in 0..vertices.len()/3 {
+	let st = format!("f {} {} {} \n",indices[index*3+0]+1,indices[index*3+1]+1,indices[index*3+2]+1);
+	file.write_all(&st.into_bytes()).unwrap();
+    }
     
     let mesh = Mesh {
 	vertices: vertices.clone(),
