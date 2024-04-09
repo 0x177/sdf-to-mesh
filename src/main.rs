@@ -1,11 +1,13 @@
 use macroquad::prelude::*;
 mod mtable;
 use crate::mtable::{TRI_TABLE,CORNER_INDEX_A,CORNER_INDEX_B};
+use core::f32::EPSILON;
 
 const MX: usize = 16;
 const MY: usize = 16;
 const MZ: usize = 16;
-const DENSITY: f32 = 0.5;
+const DENSITY: f32 = 0.25;
+const INTERPOLATE: bool = true;
 
 fn sphere(c: Vec3,r: f32) -> f32 {
     c.length()-r
@@ -29,6 +31,39 @@ fn cubed(p: Vec3,b: Vec3) -> f32 {
     (maxcw(d,vec3(0.0,0.0,0.0))+vmax(mincw(d,vec3(0.0,0.0,0.0)))).length()
 }
 
+fn isovalue(ep: &Vec3) -> f32 {
+    let sphere = sphere(vec3(3.0,3.0,3.0)-*ep,0.5);
+    let cube = cubed(vec3(3.0,1.0,3.0)-*ep,vec3(0.2,0.2,0.2));
+    if sphere < cube {sphere} else {cube}
+    //sphere
+}
+
+fn interpolate_edges(x: Vec3,y: Vec3) -> Vec3 {
+    let mut point = Vec3::new(0.0,0.0,0.0);
+    let v1 = isovalue(&x);
+    let v2 = isovalue(&y);
+
+    if DENSITY - v1 < EPSILON {
+	return x;
+    }
+    
+    if DENSITY - v2 < EPSILON {
+	return y;
+    }
+
+    if v1 - v2 < EPSILON {
+	return x;
+    }
+
+    let mu = (DENSITY / v1) - (v2 - v1);
+
+    point.x = x.x + mu * (y.x-x.x);
+    point.y = x.y + mu * (y.y-x.y);
+    point.z = x.z + mu * (y.z-x.z);
+
+    return point;
+}
+
 #[macroquad::main("3D")]
 async fn main() {
     let mut vertices: Vec<macroquad::models::Vertex> = Vec::new();
@@ -50,11 +85,9 @@ async fn main() {
 
 		let mut value: i32 = 0;
 		for (ind,ep) in corner_points.iter().enumerate() {
-		    let sphere = sphere(vec3(3.0,3.0,3.0)-*ep,0.5);
-		    let cube = cubed(vec3(3.0,1.0,3.0)-*ep,vec3(0.2,0.2,0.2));
-		    let d = if sphere < cube {sphere} else {cube};
+		    let d = isovalue(&ep);
 		    
-		    if d < DENSITY {
+		    if d < 0.25 {
 			value += 1 << ind;
 		    }
 		}
@@ -64,10 +97,16 @@ async fn main() {
 		    if edge_index >= 0 {
 			let index_a = CORNER_INDEX_A[edge_index as usize];
 			let index_b = CORNER_INDEX_B[edge_index as usize];
-			
-			let vertex = (corner_points[index_a as usize]+corner_points[index_b as usize])/2.0;
 
-			vertices.push(macroquad::models::Vertex {position: vertex,uv: vec2(1.0,1.0),color: WHITE});
+			if INTERPOLATE {
+			    let vertex = interpolate_edges(corner_points[index_a as usize],corner_points[index_b as usize]);
+
+			    vertices.push(macroquad::models::Vertex {position: vertex,uv: vec2(1.0,1.0),color: WHITE});
+			} else {
+			    let vertex = (corner_points[index_a as usize]+corner_points[index_b as usize])/2.0;
+
+			    vertices.push(macroquad::models::Vertex {position: vertex,uv: vec2(1.0,1.0),color: WHITE});
+			}
 		    }
 		}
 	    }
